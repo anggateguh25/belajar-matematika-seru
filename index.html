@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pelajaran Matematika Seru</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: linear-gradient(to bottom, #fef3c7, #fcd34d);
+      color: #333;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+    h1 {
+      color: #ff4081;
+      text-align: center;
+      font-size: 2.5em;
+      text-shadow: 2px 2px #fff;
+    }
+    p {
+      text-align: center;
+      font-size: 18px;
+      color: #4b5563;
+    }
+    .exercise {
+      background: #ffffff;
+      border: 3px dashed #fbbf24;
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 4px 4px 0px #facc15;
+      transition: transform 0.2s ease;
+      position: relative;
+      animation: fadeIn 0.6s ease;
+    }
+    .exercise:hover {
+      transform: scale(1.02);
+    }
+    .question {
+      font-size: 24px;
+      margin-bottom: 15px;
+      color: #1f2937;
+    }
+    .result {
+      font-size: 18px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="number"] {
+      font-size: 20px;
+      width: 70px;
+      text-align: center;
+      padding: 5px;
+      border: 2px solid #60a5fa;
+      border-radius: 8px;
+      background-color: #eff6ff;
+      margin-right: 10px;
+    }
+    .periksa-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .periksa-button {
+      font-size: 18px;
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 2px 2px #16a34a;
+      transition: background 0.2s ease;
+    }
+    .periksa-button:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    .periksa-button:hover:not(:disabled) {
+      background-color: #16a34a;
+    }
+    .correct {
+      color: #16a34a;
+      animation: bounce 0.5s;
+    }
+    .wrong {
+      color: #dc2626;
+    }
+    .shake {
+      animation: shake 0.5s;
+    }
+    #progressText {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    #progressBar {
+      width: 80%;
+      margin: 0 auto 20px;
+      height: 10px;
+      background-color: #e5e7eb;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    #progressFill {
+      height: 100%;
+      background-color: #10b981;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🎉 Belajar Matematika Seru! 🎉</h1>
+  <p>Yuk jawab soal-soal matematika seru ini. Ketik jawabanmu dan klik tombol!</p>
+  <div id="progressText">Halaman 1 dari 5</div>
+  <div id="progressBar"><div id="progressFill"></div></div>
+
+  <div id="questions"></div>
+
+  <div class="periksa-container">
+    <button id="nextPageBtn" class="periksa-button" disabled>Periksa Jawaban</button>
+    <div id="warningMsg" style="color:red; font-size: 14px; margin-top:5px; display: none;">Harap isi semua jawaban sebelum lanjut.</div>
+  </div>
+
+  <!-- Suara -->
+  <audio id="benarAudio" src="benar.mp3" preload="auto"></audio>
+  <audio id="salahAudio" src="salah.mp3" preload="auto"></audio>
+  <audio id="selesaiAudio" src="selesai.mp3" preload="auto"></audio>
+  <audio id="pageAudio" src="page.mp3" preload="auto"></audio>
+  <audio id="pageInAudio" src="pageIn.mp3" preload="auto"></audio>
+
+  <script>
+    const benarAudio = document.getElementById("benarAudio");
+    const salahAudio = document.getElementById("salahAudio");
+    const selesaiAudio = document.getElementById("selesaiAudio");
+    const pageAudio = document.getElementById("pageAudio");
+    const pageInAudio = document.getElementById("pageInAudio");
+    const warningMsg = document.getElementById("warningMsg");
+
+    const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const config = {
+      penjumlahan: { min: 1, max: 30 },
+      pengurangan: { min: 11, max: 50, subtrahendMax: 30 },
+      emoji: { minCount: 4, maxCount: 15 },
+      cerita: { min: 5, max: 45, tambahanMax: 30 }
+    };
+
+    const generateQuestions = () => {
+      const emojis = ['🍎','🐶','🦋','🌈','🎈','🐱','🍭','🧸','🍕','🚗','🐻','🍌','🌟','🪁','🍔','🎂','🎨','🦄','🐸','🍓'];
+      const benda = ['🍪 kue', '🚗 mainan mobil', '🎈 balon', '🍎 apel', '🍌 pisang', '🧸 boneka', '🍓 stroberi'];
+      const names = ['Dina', 'Andi', 'Sita', 'Budi', 'Rina', 'Ali', 'Tari', 'Rafi', 'Lina', 'Yoga'];
+      const questions = [];
+
+      for (let i = 0; i < 5; i++) {
+        let a = getRandomInt(config.penjumlahan.min, config.penjumlahan.max);
+        let b = getRandomInt(config.penjumlahan.min, config.penjumlahan.max);
+        questions.push({ q: `${a} + ${b} = ?`, a: a + b });
+      }
+      for (let i = 0; i < 5; i++) {
+        let a = getRandomInt(config.pengurangan.min, config.pengurangan.max);
+        let b = getRandomInt(1, Math.min(config.pengurangan.subtrahendMax, a - 1));
+        questions.push({ q: `${a} - ${b} = ?`, a: a - b });
+      }
+      for (let i = 0; i < 5; i++) {
+        let count = getRandomInt(config.emoji.minCount, config.emoji.maxCount);
+        let emoji = emojis[getRandomInt(0, emojis.length - 1)];
+        questions.push({ q: `${emoji.repeat(count)} = ayo hitung, ada berapa ${emoji} ?`, a: count });
+      }
+      for (let i = 0; i < 5; i++) {
+        const name = names[getRandomInt(0, names.length - 1)];
+        const isAddition = Math.random() > 0.5;
+        let item = benda[getRandomInt(0, benda.length - 1)];
+        let a = getRandomInt(config.cerita.min, config.cerita.max);
+        let b = getRandomInt(1, config.cerita.tambahanMax);
+        if (isAddition) {
+          questions.push({
+            q: `📘 ${name} punya ${a} ${item}. ${name} diberi lagi ${b} ${item}. Sekarang ${name} punya berapa ${item}?`,
+            a: a + b
+          });
+        } else {
+          if (b >= a) b = a - 1;
+          questions.push({
+            q: `📘 ${name} punya ${a} ${item}. ${b} ${item} hilang. Sekarang berapa ${item} yang tersisa?`,
+            a: a - b
+          });
+        }
+      }
+      return questions.sort(() => Math.random() - 0.5);
+    };
+
+    const allQuestions = generateQuestions();
+    const perPage = 4;
+    let currentPage = 0;
+    const totalPages = Math.ceil(allQuestions.length / perPage);
+
+    const container = document.getElementById("questions");
+    const nextPageBtn = document.getElementById("nextPageBtn");
+
+    const renderPage = () => {
+      container.innerHTML = "";
+      nextPageBtn.disabled = true;
+      warningMsg.style.display = "none";
+      const start = currentPage * perPage;
+      const end = start + perPage;
+      const questions = allQuestions.slice(start, end);
+
+      questions.forEach((item, index) => {
+        const globalIndex = start + index;
+        const div = document.createElement("div");
+        div.className = "exercise";
+        div.innerHTML = `
+          <div class="question">${item.q}</div>
+          <input type="number" id="q${globalIndex}" oninput="enableCheck()" />
+          <div class="result" id="r${globalIndex}"></div>
+        `;
+        container.appendChild(div);
+      });
+      pageInAudio.play();
+      // Tambahan untuk progress bar dinamis:
+      document.getElementById("progressFill").style.width = ((currentPage + 1) / totalPages * 100) + "%";
+      document.getElementById("progressText").textContent = `Halaman ${currentPage + 1} dari ${totalPages}`;
+
+    };
+
+    const updateProgress = () => {
+      const totalPages = Math.ceil(allQuestions.length / questionsPerPage);
+      document.getElementById("progressText").textContent = `Halaman ${currentPage} dari ${totalPages}`;
+      const percent = (currentPage / totalPages) * 100;
+      document.getElementById("progressFill").style.width = percent + "%";
+    };
+
+    window.enableCheck = () => {
+      const start = currentPage * perPage;
+      const inputs = Array.from({length: perPage}, (_, i) => document.getElementById(`q${start + i}`));
+      nextPageBtn.disabled = inputs.some(input => input.value.trim() === "");
+    };
+
+    nextPageBtn.onclick = () => {
+      const start = currentPage * perPage;
+      let allCorrect = true;
+      let allAnswered = true;
+
+      for (let i = 0; i < perPage; i++) {
+        const idx = start + i;
+        const input = document.getElementById(`q${idx}`);
+        const result = document.getElementById(`r${idx}`);
+        const val = input.value.trim();
+
+        if (val === "") {
+          allAnswered = false;
+          break;
+        }
+      }
+
+      if (!allAnswered) {
+        warningMsg.style.display = "block";
+        return;
+      } else {
+        warningMsg.style.display = "none";
+      }
+
+      for (let i = 0; i < perPage; i++) {
+        const idx = start + i;
+        const input = document.getElementById(`q${idx}`);
+        const result = document.getElementById(`r${idx}`);
+        if (parseInt(input.value) === allQuestions[idx].a) {
+          result.textContent = '✅ Jawaban kamu benar, hebat!';
+          result.className = 'result correct';
+        } else {
+          result.textContent = '❌ Ups, ayo kita coba lagi!';
+          result.className = 'result wrong shake';
+          result.offsetWidth;
+          result.classList.remove('shake');
+          void result.offsetWidth;
+          result.classList.add('shake');
+          allCorrect = false;
+        }
+      }
+
+      if (allCorrect) {
+        benarAudio.play();
+        setTimeout(() => {
+          pageAudio.play();
+          currentPage++;
+          if (currentPage < totalPages) {
+            renderPage();
+          } else {
+            showSelesai();
+          }
+        }, 1000);
+      } else {
+        salahAudio.play();
+      }
+    };
+
+    const showSelesai = () => {
+      container.innerHTML = '<h2 style="text-align:center; color:#10b981; font-size:28px">Sudah selesai, kamu hebat sekali! 🎉</h2><div style="text-align:center;"><img src="animasi.gif" alt="Animasi selesai" style="max-width:300px;margin-top:20px"/></div><div style="text-align:center; margin-top:20px;"><button onclick="restart()" class="periksa-button">Mulai dari awal lagi</button></div>';
+      nextPageBtn.style.display = "none";
+      selesaiAudio.play();
+    };
+
+    window.restart = () => {
+      selesaiAudio.pause();
+      selesaiAudio.currentTime = 0;
+      location.reload();
+    };
+
+    renderPage();
+  </script>
+</body>
+</html>
